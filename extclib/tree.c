@@ -253,6 +253,8 @@ static void _set_tree(tree_node *node, vtype_tree_t tkey, vtype_tree_t tvalue, v
                 _set_value(node, tvalue, value);
             }
             break;
+        case REAL_ELEM:
+            break;
     }
 }
 
@@ -267,6 +269,8 @@ static tree_node *_new_node(vtype_tree_t tkey, vtype_tree_t tvalue, void *key, v
         case STRING_ELEM:
             node->data.key.string = (uint8_t *)key;
             _set_value(node, tvalue, value);
+            break;
+        case REAL_ELEM:
             break;
     }
     node->left = NULL;
@@ -329,6 +333,7 @@ static void _print_elem(tree_node *node, vtype_tree_t tkey, vtype_tree_t tvalue)
                     printf("%s] ", node->data.value.string);
                     break;
             }
+        case REAL_ELEM:
             break;
     }
 }

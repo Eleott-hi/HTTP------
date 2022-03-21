@@ -2,16 +2,12 @@ CC=gcc
 LN=ld
 CFLAGS=-Wall -std=c99
 
-HEADERS=hashtab.h tree.h
-SOURCES=hashtab.c tree.c
-OBJECTS=hashtab.o tree.o
+FILES=main.c extclib/extclib.o
 
-.PHONY: defualt
-defualt: build link
+.PHONY: defualt build run
+defualt: build run
 
-build: $(HEADERS) $(SOURCES)
-	$(CC) $(CFLAGS) -c $(SOURCES)
-link: $(OBJECTS)
-	$(LN) -r $(OBJECTS) -o extclib.o
-clean:
-	rm -f *.o *.i *.s
+build: $(FILES)
+	$(CC) $(CFLAGS) $(FILES) -o main
+run:
+	./main
