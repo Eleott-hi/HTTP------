@@ -1,19 +1,17 @@
-#ifdef _linux_
+#ifdef __linux__
 #include <arpa/inet.h>
 #include <unistd.h>
 #elif _WIN32
-#include <WinSock2.h>
+#include <winsock2.h>
 #else
 #warning "net.h: platform not supported"
 #endif
 
-#if defined(_linux_) || defined(_WIN32)
+#if defined(__linux__) || defined(_WIN32)
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-#include "net.h"
 
 typedef enum error_t {
     WINSOCK_ERR = -1,
@@ -25,10 +23,12 @@ typedef enum error_t {
     CONNECT_ERR = -7,
 } error_t;
 
-static int8_t _parse_address(char* address, char* ipv4, char* port);
+#include "net.h"
+
+static int8_t _parse_address(char *address, char *ipv4, char *port);
 
 // 127.0.0.1:8080
-extern int listen_net(char* address) {
+extern int listen_net(char *address) {
 #ifdef _WIN32
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -39,9 +39,15 @@ extern int listen_net(char* address) {
     if (listener < 0) {
         return SOCKET_ERR;
     }
+#ifdef __linux__
     if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
         return SETOPT_ERR;
     }
+#else
+    if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &(char){1}, sizeof(char)) < 0) {
+        return SETOPT_ERR;
+    }
+#endif
     char ipv4[16];
     char port[6];
     if (_parse_address(address, ipv4, port) != 0) {
@@ -51,7 +57,7 @@ extern int listen_net(char* address) {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(atoi(port));
     addr.sin_addr.s_addr = inet_addr(ipv4);
-    if (bind(listener, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+    if (bind(listener, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
         return BIND_ERR;
     }
     if (listen(listener, SOMAXCONN) != 0) {
@@ -64,8 +70,8 @@ extern int accept_net(int listener) {
     return accept(listener, NULL, NULL);
 }
 
-extern int connect_net(char* address) {
-#ifdef _WIN32
+extern int connect_net(char *address) {
+#ifdef __WIN32
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         return WINSOCK_ERR;
@@ -84,29 +90,30 @@ extern int connect_net(char* address) {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(atoi(port));
     addr.sin_addr.s_addr = inet_addr(ipv4);
-    if (connect(conn, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+    if (connect(conn, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
         return CONNECT_ERR;
     }
     return conn;
 }
+
 extern int close_net(int conn) {
-#ifdef _linux_
+#ifdef __linux__
     return close(conn);
 #elif _WIN32
     return closesocket(conn);
 #endif
 }
 
-extern int send_net(int conn, char* buffer, size_t size) {
+extern int send_net(int conn, char *buffer, size_t size) {
     return send(conn, buffer, (int)size, 0);
 }
-extern int recv_net(int conn, char* buffer, size_t size) {
+
+extern int recv_net(int conn, char *buffer, size_t size) {
     return recv(conn, buffer, (int)size, 0);
 }
 
-static int8_t _parse_address(char* address, char* ipv4, char* port) {
+static int8_t _parse_address(char *address, char *ipv4, char *port) {
     size_t i = 0, j = 0;
-
     for (; address[i] != ':'; ++i) {
         if (address[i] == '\0') {
             return 1;
@@ -116,9 +123,8 @@ static int8_t _parse_address(char* address, char* ipv4, char* port) {
         }
         ipv4[i] = address[i];
     }
-    i++;
     ipv4[i] = '\0';
-    for (; address[i] != '\0'; ++i, ++j) {
+    for (i += 1; address[i] != '\0'; ++i, ++j) {
         if (j >= 5) {
             return 3;
         }
@@ -128,4 +134,4 @@ static int8_t _parse_address(char* address, char* ipv4, char* port) {
     return 0;
 }
 
-#endif  // defined(_linux_) || defined(_WIN32)
+#endif /* defined(__linux__) || defined(__WIN32) */
