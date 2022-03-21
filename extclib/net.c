@@ -115,7 +115,8 @@ static int8_t _parse_address(char* address, char* ipv4, char* port) {
             return 2;
         }
         ipv4[i] = address[i];
-    }i++;
+    }
+    i++;
     ipv4[i] = '\0';
     for (; address[i] != '\0'; ++i, ++j) {
         if (j >= 5) {
