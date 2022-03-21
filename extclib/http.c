@@ -21,8 +21,8 @@ typedef struct HTTP {
 } HTTP;
 
 static HTTPreq _new_request(void);
-static void _null_request(HTTPreq *request);
 static void _parse_request(HTTPreq *request, char *buffer, size_t size);
+static void _null_request(HTTPreq *request);
 static int8_t _switch_http(HTTP *http, int conn, HTTPreq *request);
 static void _page404_http(int conn);
 
@@ -33,7 +33,7 @@ extern HTTP *new_http(char *address) {
     http->host = (char *)malloc(sizeof(char) * strlen(address) + 1);
     strcpy(http->host, address);
     http->tab = new_hashtab(http->cap, STRING_ELEM, DECIMAL_ELEM);
-    http->funcs = (void (**)(int, HTTPreq *))malloc(http->cap * sizeof(void (*)(int, HTTPreq *)));
+    http->funcs = (void (**)(int, HTTPreq *))malloc(http->cap * (sizeof(void (*)(int, HTTPreq *))));
     return http;
 }
 
@@ -47,10 +47,11 @@ extern void free_http(HTTP *http) {
 extern void handle_http(HTTP *http, char *path, void (*handle)(int, HTTPreq *)) {
     set_hashtab(http->tab, string(path), decimal(http->len));
     http->funcs[http->len] = handle;
-    http->len++;
+    http->len += 1;
     if (http->len == http->cap) {
         http->cap <<= 1;
-        http->funcs = (void (**)(int, HTTPreq *))realloc(http->funcs, http->cap * (sizeof(void (*)(int, HTTPreq *))));
+        http->funcs = (void (**)(int, HTTPreq *))realloc(http->funcs,
+                                                         http->cap * (sizeof(void (*)(int, HTTPreq *))));
     }
 }
 
@@ -75,16 +76,16 @@ extern int8_t listen_http(HTTP *http) {
             if (n != BUFSIZ) {
                 break;
             }
-            _switch_http(http, conn, &req);
-            close_net(conn);
         }
-        close_net(listener);
-        return 0;
+        _switch_http(http, conn, &req);
+        close_net(conn);
     }
+    close_net(listener);
+    return 0;
 }
 
 extern void parsehtml_http(int conn, char *filename) {
-    char buffer[BUFSIZ] = "HTTP/1.1 200 OK\nContent - type: text/html\n\n";
+    char buffer[BUFSIZ] = "HTTP/1.1 200 OK\nContent-type: text/html\n\n";
     size_t readsize = strlen(buffer);
     send_net(conn, buffer, readsize);
     FILE *file = fopen(filename, "r");
@@ -108,12 +109,12 @@ static HTTPreq _new_request(void) {
 }
 
 /*
-    GET /books HTTP/1.1
+        GET /books HTTP/1.1
 */
 
 static void _parse_request(HTTPreq *request, char *buffer, size_t size) {
-    printf("%s\n", buffer);
-    for (size_t i = 0; i < size; i++) {
+    // printf("%s\n", buffer);
+    for (size_t i = 0; i < size; ++i) {
         switch (request->state) {
             case 0:
                 if (buffer[i] == ' ' || request->index == METHOD_SIZE - 1) {
@@ -123,7 +124,6 @@ static void _parse_request(HTTPreq *request, char *buffer, size_t size) {
                 }
                 request->method[request->index] = buffer[i];
                 break;
-
             case 1:
                 if (buffer[i] == ' ' || request->index == PATH_SIZE - 1) {
                     request->path[request->index] = '\0';
@@ -132,7 +132,6 @@ static void _parse_request(HTTPreq *request, char *buffer, size_t size) {
                 }
                 request->path[request->index] = buffer[i];
                 break;
-
             case 2:
                 if (buffer[i] == '\n' || request->index == PROTO_SIZE - 1) {
                     request->proto[request->index] = '\0';
@@ -141,22 +140,17 @@ static void _parse_request(HTTPreq *request, char *buffer, size_t size) {
                 }
                 request->proto[request->index] = buffer[i];
                 break;
-
             default:
                 return;
         }
-        request->index++;
+        request->index += 1;
     }
 }
 
 static void _null_request(HTTPreq *request) {
+    request->state += 1;
     request->index = 0;
-    request->state++;
 }
-
-/*
-    /about/1
-*/
 
 static int8_t _switch_http(HTTP *http, int conn, HTTPreq *request) {
     if (!in_hashtab(http->tab, string(request->path))) {
@@ -167,16 +161,16 @@ static int8_t _switch_http(HTTP *http, int conn, HTTPreq *request) {
             _page404_http(conn);
             return 1;
         }
-        index--;
-        buffer[index] = '\0';
-        for (; index > 0 && buffer[index] != '/'; index--) {
+        index -= 1;
+        //		buffer[index] = '\0';
+        for (; index > 0 && buffer[index] != '/'; --index) {
             buffer[index] = '\0';
         }
         if (!in_hashtab(http->tab, string(buffer))) {
             _page404_http(conn);
             return 2;
         }
-         index = get_hashtab(http->tab, string(request->path)).decimal;
+        index = get_hashtab(http->tab, string(buffer)).decimal;
         http->funcs[index](conn, request);
         return 0;
     }
@@ -186,7 +180,7 @@ static int8_t _switch_http(HTTP *http, int conn, HTTPreq *request) {
 }
 
 static void _page404_http(int conn) {
-    char *header = "HTTP/1.1 404 Not Found\n\nnot fouend";
+    char *header = "HTTP/1.1 404 Not Found\n\nnot found";
     size_t headsize = strlen(header);
     send_net(conn, header, headsize);
 }
