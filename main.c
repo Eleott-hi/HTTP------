@@ -1,5 +1,7 @@
-#include <extclib/http.h>
+#include <stdio.h>
 #include <string.h>
+
+#include "extclib/http.h"
 
 void index_page(int conn, HTTPreq* request);
 void about_page(int conn, HTTPreq* request);
@@ -15,7 +17,7 @@ int main() {
 }
 
 void index_page(int conn, HTTPreq* request) {
-    if (strcmp(req->path, "/") != 0) {
+    if (strcmp(request->path, "/") != 0) {
         parsehtml_http(conn, "page404.html");
         return;
     }
@@ -23,7 +25,7 @@ void index_page(int conn, HTTPreq* request) {
 }
 
 void about_page(int conn, HTTPreq* request) {
-    if (strcmp(req->path, "/about") != 0) {
+    if (strcmp(request->path, "/about") != 0) {
         parsehtml_http(conn, "page404.html");
         return;
     }
